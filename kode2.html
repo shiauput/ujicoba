@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Peta Interaktif Persebaran SMA, Jalan, dan Sungai</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <style>
+    #map {
+      height: 600px;
+      width: 100%;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 10px;
+    }
+    .info {
+      margin-top: 20px;
+    }
+    .legend {
+      background: white;
+      padding: 10px;
+      line-height: 1.5em;
+      border-radius: 5px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.4);
+    }
+    .legend i {
+      width: 14px;
+      height: 14px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Peta Interaktif Persebaran SMA, Jalan, dan Sungai di Lampung</h2>
+<div id="map"></div>
+
+<div class="info">
+  <p>Peta ini menampilkan empat layer utama yang dapat diaktifkan/di-nonaktifkan:</p>
+  <ul>
+    <li><strong>Adm Lampung</strong>: Batas wilayah administratif</li>
+    <li><strong>Persebaran SMA</strong>: Lokasi sekolah menengah atas</li>
+    <li><strong>Sungai Balam</strong>: Jaringan sungai</li>
+    <li><strong>Jalan Balam</strong>: Jaringan jalan</li>
+  </ul>
+</div>
+
+<script>
+  // Inisialisasi peta
+  var map = L.map('map').setView([-5.3878, 105.2738], 11);
+
+  // Basemap OSM
+  var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Layer kosong sebagai variabel agar bisa masuk ke layer control
+  var admLayer = L.layerGroup();
+  var smaLayer = L.layerGroup();
+  var sungaiLayer = L.layerGroup();
+  var jalanLayer = L.layerGroup();
+
+  // Load Adm Lampung
+  fetch("adm-lampung.geojson")
+    .then(response => response.json())
+    .then(data => {
+      L.geoJSON(data, {
+        style: { color: "#ff6600", weight: 2, opacity: 0.6 }
+      }).addTo(admLayer);
+    });
+
+  // Load Persebaran SMA
+  fetch("persebaran-sma.geojson")
+    .then(response => response.json())
+    .then(data => {
+      L.geoJSON(data, {
+        pointToLayer: function (feature, latlng) {
+          return L.circleMarker(latlng, {
+            radius: 6,
+            fillColor: "#0078ff",
+            color: "#fff",
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.9
+          }).bindPopup("<b>Nama SMA:</b> " + feature.properties.NAMA);
+        }
+      }).addTo(smaLayer);
+    });
+
+  // Load Sungai
+  fetch("shp-sungai-balam.geojson")
+    .then(response => response.json())
+    .then(data => {
+      L.geoJSON(data, {
+        style: { color: "blue", weight: 1.5 }
+      }).bindPopup("Sungai").addTo(sungaiLayer);
+    });
+
+  // Load Jalan
+  fetch("shp-jalan-balam.geojson")
+    .then(response => response.json())
+    .then(data => {
+      L.geoJSON(data, {
+        style: { color: "gray", weight: 2, dashArray: '4' }
+      }).bindPopup("Jalan").addTo(jalanLayer);
+    });
+
+  // Tambahkan semua layer ke peta
+  admLayer.addTo(map);
+  smaLayer.addTo(map);
+  sungaiLayer.addTo(map);
+  jalanLayer.addTo(map);
+
+  // Layer Control
+  var baseMaps = {
+    "OpenStreetMap": osm
+  };
+
+  var overlayMaps = {
+    "Adm Lampung": admLayer,
+    "Persebaran SMA": smaLayer,
+    "Sungai Balam": sungaiLayer,
+    "Jalan Balam": jalanLayer
+  };
+
+  L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+  // Legend
+  var legend = L.control({ position: "bottomright" });
+
+  legend.onAdd = function (map) {
+    var div = L.DomUtil.create("div", "legend");
+    div.innerHTML += "<i style='background: #ff6600'></i> Adm Lampung<br>";
+    div.innerHTML += "<i style='background: #0078ff'></i> Persebaran SMA<br>";
+    div.innerHTML += "<i style='background: gray'></i> Jalan Balam<br>";
+    div.innerHTML += "<i style='background: blue'></i> Sungai Balam<br>";
+    return div;
+  };
+
+  legend.addTo(map);
+</script>
+
+</body>
+</html>
